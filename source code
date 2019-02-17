@@ -1,0 +1,66 @@
+##Load the data
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(caret)
+library(e1071)
+library(randomForest)
+library(corrplot)
+library(gbm)
+
+getwd()
+setwd("C:\\Users\\Joanna\\Desktop\\R_coursera\\practicalML\\")
+
+train_data <- read.csv('pml-training.csv', na.strings = c("NA", "#DIV/0!", ""))
+test_data <- read.csv('pml-testing.csv', na.strings = c("NA", "#DIV/0!", ""))
+
+
+##Remove feature with missing values
+clnColumnIndex <- colSums(is.na(train_data))/nrow(train_data) < 0.95
+clean_train_data <- train_data[,clnColumnIndex]
+colSums(is.na(clean_train_data))/nrow(clean_train_data)
+colSums(is.na(clean_train_data))
+
+
+## Remove irrelevant features (1-7)
+clean_train_data <- clean_train_data[,-c(1:7)]
+clean_test_data <- test_data[,-c(1:7)]
+
+
+##Split into training, test, and corss-validation sets
+inTrInd <- createDataPartition(clean_train_data$classe, p=0.75)[[1]]
+training_train_data <- clean_train_data[inTrInd,]
+training_crossval_data <- clean_train_data[-inTrInd,]
+all_names <- names(clean_train_data)
+clean_test_data <- test_data[,all_names[1:52]]
+head(clean_test_data)
+
+
+##Correlation between features 
+correlationMatrix <-cor(data.matrix(clean_train_data)[, -54])
+correlationMatrix
+corrplot(correlationMatrix, order="FPC", method="circle", type="full", tl.cex=0.7,  tl.col="black", tl.srt=45, col=brewer.pal(n=8, name="RdYlBu"))
+
+
+## Algorithm 1: Decision tree 
+set.seed(12345)
+##dTreeMod <- train(classe ~., method='rpart', data=training_train_data)
+##dTreePrediction <- predict(dtreeMod, training_crossval_data)
+##confusionMatrix(training_crossval_data$classe, dTreePrediction)
+##rpart.plot(dtreeMod$finalModel) 
+
+dTreeMod <- rpart(classe ~ ., data=clean_train_data, method="class")
+fancyRpartPlot(dTreeMod) ##(fig2)
+
+
+##Algorithm 2: Random forest
+rforestMod <- train(classe ~., method='rf', data=training_train_data, ntree=128)
+rforestPrediction <- predict(rforestMod, training_crossval_data)
+confusionMatrix(training_crossval_data$classe, rforestPrediction)
+predict(rforestMod, clean_test_data)
+
+rforestMod$finalModel
+
+
+
