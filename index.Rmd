@@ -82,13 +82,13 @@ fancyRpartPlot(dTreeMod, cex=0.5)
 ```
 
 
-Validate decision tree model (dTreeMod) using the clean test dataset
+Validate decision tree model (dTreeMod) and calculate the sample error using the clean test dataset
 ```{r}
 valdTreeMod <- predict(dTreeMod, val_set, type = "class")
 vdTreeMod <- confusionMatrix(valdTreeMod, val_set$classe)
 vdTreeMod
 ```
-Decision tree accuracy = 0.75
+Decision tree accuracy = 0.75 and thus the sample error is 0.25.
 
 Algorithm 2: Random forest
 ```{r}
@@ -97,13 +97,13 @@ rforestMod <- train(classe ~., method='rf', data=train_set, ntree=128)
 rforestMod$finalModel
 ```
 
-Validate random forest model (rforestMod) using the clean test dataset
+Validate random forest model (rforestMod) and calculate the sample error using the clean test dataset
 ```{r}
 valrforestMod <- predict(rforestMod , newdata=val_set)
 crforest <- confusionMatrix(valrforestMod, val_set$classe)
 crforest
 ```
-Random forest accuracy = 0.99
+Random forest accuracy = 0.99 and the sample error=0.1.
 
 Use the model with higher accuracy - random forest, on the test dataset
 ```{r}
