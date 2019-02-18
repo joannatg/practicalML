@@ -1,4 +1,3 @@
-##Load the data
 library(rpart)
 library(rpart.plot)
 library(RColorBrewer)
@@ -9,9 +8,16 @@ library(randomForest)
 library(corrplot)
 library(gbm)
 
-train_data <- read.csv('pml-training.csv', na.strings = c("NA", "#DIV/0!", ""))
-test_data <- read.csv('pml-testing.csv', na.strings = c("NA", "#DIV/0!", ""))
 
+getwd()
+setwd("C:\\Users\\Joanna\\Desktop\\R_coursera\\practicalML\\")
+
+##https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+train_data <- read.csv('pml-training.csv', na.strings = c("NA", "#DIV/0!", ""))
+
+
+##https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+test_data <- read.csv('pml-testing.csv', na.strings = c("NA", "#DIV/0!", ""))
 
 ##Remove feature with missing values
 clnColumnIndex <- colSums(is.na(train_data))/nrow(train_data) < 0.95
@@ -19,45 +25,52 @@ clean_train_data <- train_data[,clnColumnIndex]
 colSums(is.na(clean_train_data))/nrow(clean_train_data)
 colSums(is.na(clean_train_data))
 
-
 ## Remove irrelevant features (1-7)
 clean_train_data <- clean_train_data[,-c(1:7)]
-clean_test_data <- test_data[,-c(1:7)]
+clean_val_data <- test_data[,-c(1:7)]
 
-
-##Split into training, test, and corss-validation sets
-inTrInd <- createDataPartition(clean_train_data$classe, p=0.75)[[1]]
-training_train_data <- clean_train_data[inTrInd,]
-training_crossval_data <- clean_train_data[-inTrInd,]
-all_names <- names(clean_train_data)
-clean_test_data <- test_data[,all_names[1:52]]
-head(clean_test_data)
+##Split into train (70%) and test (30%) sets
+inTrInd <- createDataPartition(clean_train_data$classe, p=0.7)[[1]]
+train_set <- clean_train_data[inTrInd,]
+val_set <- clean_train_data[-inTrInd,]
+##all_names <- names(clean_train_data)
+##clean_test_data <- test_data[,all_names[1:52]]
+head(train_set)
+head(val_set)
 
 
 ##Correlation between features 
-correlationMatrix <-cor(data.matrix(clean_train_data)[, -54])
+correlationMatrix <-cor(data.matrix(train_set)[, -54])
 correlationMatrix
-corrplot(correlationMatrix, order="FPC", method="circle", type="full", tl.cex=0.7,  tl.col="black", tl.srt=45, col=brewer.pal(n=8, name="RdYlBu"))
-
+corrplot(correlationMatrix, order="FPC", method="circle", type="full", tl.cex=0.7,  tl.col="black", tl.srt=45, col=brewer.pal(n=8, name="RdYlBu")) ##(fig1)
 
 ## Algorithm 1: Decision tree 
 set.seed(12345)
-##dTreeMod <- train(classe ~., method='rpart', data=training_train_data)
-##dTreePrediction <- predict(dtreeMod, training_crossval_data)
-##confusionMatrix(training_crossval_data$classe, dTreePrediction)
-##rpart.plot(dtreeMod$finalModel) 
-
-dTreeMod <- rpart(classe ~ ., data=clean_train_data, method="class")
+dTreeMod <- rpart(classe ~ ., data=train_set, method="class")
 fancyRpartPlot(dTreeMod) ##(fig2)
+
+##Validate dTreeMod using the clean test data
+valdTreeMod <- predict(dTreeMod, val_set, type = "class")
+vdTreeMod <- confusionMatrix(valdTreeMod, val_set$classe)
+vdTreeMod
+#Decision tree accuracy = 0.75
 
 
 ##Algorithm 2: Random forest
-rforestMod <- train(classe ~., method='rf', data=training_train_data, ntree=128)
-rforestPrediction <- predict(rforestMod, training_crossval_data)
-confusionMatrix(training_crossval_data$classe, rforestPrediction)
-predict(rforestMod, clean_test_data)
-
+set.seed(12345)
+rforestMod <- train(classe ~., method='rf', data=train_set, ntree=128)
 rforestMod$finalModel
+
+##Validate rforestMod using the clean test data
+valrforestMod <- predict(rforestMod , newdata=val_set)
+crforest <- confusionMatrix(valrforestMod, val_set$classe)
+crforest
+##Random Forest accuracy = 0.99
+
+
+## Use the model with higher accuracy - random forest, on the test dataset
+finalResult <- predict(rforestMod, newdata=clean_val_data )
+finalResult
 
 
 
