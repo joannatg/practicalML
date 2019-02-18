@@ -1,0 +1,119 @@
+---
+title: "practicalML_assignment"
+author: "Joanna Tyszkiewicz Georgescu"
+date: "February 16, 2019"
+output: 
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+##Overview
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+##Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+##Methods
+Load the data
+```{r, echo=FALSE,results='hide',message=FALSE, warning=FALSE}
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(rattle)
+library(caret)
+library(e1071)
+library(randomForest)
+library(corrplot)
+library(gbm)
+getwd()
+setwd("C:\\Users\\Joanna\\Desktop\\R_coursera\\practicalML\\")
+```
+
+
+Clean the data and remove features with missing values
+```{r}
+train_data <- read.csv('pml-training.csv', na.strings = c("NA", "#DIV/0!", ""))
+test_data <- read.csv('pml-testing.csv', na.strings = c("NA", "#DIV/0!", ""))
+clnColumnIndex <- colSums(is.na(train_data))/nrow(train_data) < 0.95
+clean_train_data <- train_data[,clnColumnIndex]
+colSums(is.na(clean_train_data))/nrow(clean_train_data)
+colSums(is.na(clean_train_data))
+```
+
+Remove irrelevant features (1-7)
+```{r}
+clean_train_data <- clean_train_data[,-c(1:7)]
+clean_test_data <- test_data[,-c(1:7)]
+```
+
+Split into train and test sets
+```{r}
+inTrInd <- createDataPartition(clean_train_data$classe, p=0.7)[[1]]
+train_set <- clean_train_data[inTrInd,]
+val_set <- clean_train_data[-inTrInd,]
+```
+
+Visualize correlation between features 
+```{r}
+correlationMatrix <-cor(data.matrix(train_set)[, -54])
+corrplot(correlationMatrix, order="FPC", method="circle", type="full",tl.col="black",  tl.cex = 0.6)
+```
+
+
+Two algorithms, Decision Tree and Random Forest, are next applied to model the regressions and the algorithm with higher accuracy is used for final redictions. 
+
+Algorithm 1: Decision tree 
+```{r,message=FALSE, warning=FALSE}
+set.seed(12345)
+dTreeMod <- rpart(classe ~ ., data=train_set, method="class")
+fancyRpartPlot(dTreeMod, cex=0.5) 
+```
+
+
+Validate decision tree model (dTreeMod) using the clean test dataset
+```{r}
+valdTreeMod <- predict(dTreeMod, val_set, type = "class")
+vdTreeMod <- confusionMatrix(valdTreeMod, val_set$classe)
+vdTreeMod
+```
+Decision tree accuracy = 0.75
+
+Algorithm 2: Random forest
+```{r}
+set.seed(12345)
+rforestMod <- train(classe ~., method='rf', data=train_set, ntree=128)
+rforestMod$finalModel
+```
+
+Validate random forest model (rforestMod) using the clean test dataset
+```{r}
+valrforestMod <- predict(rforestMod , newdata=val_set)
+crforest <- confusionMatrix(valrforestMod, val_set$classe)
+crforest
+```
+Random forest accuracy = 0.99
+
+Use the model with higher accuracy - random forest, on the test dataset
+```{r}
+finalResult <- predict(rforestMod, newdata=clean_test_data )
+finalResult
+```
+
+##Results
+The finalResult will be used to answer practical ML quiz 4 quesions.
+
+
+
+
